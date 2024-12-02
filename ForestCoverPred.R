@@ -28,13 +28,18 @@ my_recipe <- recipe(Cover_Type ~ ., data = train) %>%
   step_pca(starts_with("Soil_Type"), num_comp = 5) %>%
   step_smote(Cover_Type)
 
-bake_prep <- prep(my_recipe)
+my_recipe1 <- recipe(Cover_Type ~ ., data = train) %>%
+  step_mutate_at(starts_with("Wilderness_Area"), fn = as.factor) %>%
+  step_mutate_at(starts_with("Soil_Type"), fn = as.factor)
+
+
+bake_prep <- prep(my_recipe1)
 baked <- bake(bake_prep, new_data = NULL)
 
 
 rf_spec <- rand_forest(
   mtry = tune(), 
-  trees = 1000,   
+  trees = 200,   
   min_n = tune() 
 ) %>%
   set_engine("ranger") %>% 
@@ -43,9 +48,9 @@ rf_spec <- rand_forest(
 
 rf_workflow <- workflow() %>%
   add_model(rf_spec) %>%
-  add_recipe(my_recipe) 
+  add_recipe(my_recipe1) 
 
-cv_splits <- vfold_cv(train, v = 5) 
+cv_splits <- vfold_cv(train, v = 2) 
 
 rf_grid <- grid_regular(
   mtry(range = c(2, 10)), 
@@ -76,6 +81,5 @@ submission <- test %>%
   select(Id) %>%                    
   bind_cols(Cover_Type = test_predictions$.pred_class) 
 
-write_csv(submission, "RandomForest.csv")
+vroom_write(kaggle_submission, "./RandomForestNEW.csv", delim = ",")
 
-head(submission)
