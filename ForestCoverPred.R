@@ -29,9 +29,12 @@ my_recipe <- recipe(Cover_Type ~ ., data = train) %>%
   step_smote(Cover_Type)
 
 my_recipe1 <- recipe(Cover_Type ~ ., data = train) %>%
-  step_mutate_at(starts_with("Wilderness_Area"), fn = as.factor) %>%
+  step_zv(all_predictors()) %>%  # Remove zero-variance columns
+  step_normalize(all_numeric_predictors(), -all_outcomes(), -starts_with("Wilderness_Area"), -starts_with("Soil_Type")) %>%
+  step_pca(starts_with("Soil_Type"), num_comp = 5) %>%  # Perform PCA on Soil_Type columns
+  step_smote(Cover_Type) %>%  # Apply SMOTE while all columns are numeric
+  step_mutate_at(starts_with("Wilderness_Area"), fn = as.factor) %>%  # Convert Wilderness_Area columns to factors afterward
   step_mutate_at(starts_with("Soil_Type"), fn = as.factor)
-
 
 bake_prep <- prep(my_recipe1)
 baked <- bake(bake_prep, new_data = NULL)
@@ -39,7 +42,7 @@ baked <- bake(bake_prep, new_data = NULL)
 
 rf_spec <- rand_forest(
   mtry = tune(), 
-  trees = 200,   
+  trees = 500,   
   min_n = tune() 
 ) %>%
   set_engine("ranger") %>% 
@@ -81,5 +84,5 @@ submission <- test %>%
   select(Id) %>%                    
   bind_cols(Cover_Type = test_predictions$.pred_class) 
 
-vroom_write(kaggle_submission, "./RandomForestNEW.csv", delim = ",")
+vroom_write(submission, "./RandomForestNEW.csv", delim = ",")
 
