@@ -53,11 +53,11 @@ rf_workflow <- workflow() %>%
   add_model(rf_spec) %>%
   add_recipe(my_recipe1) 
 
-cv_splits <- vfold_cv(train, v = 2) 
+cv_splits <- vfold_cv(train, v = 3) 
 
 rf_grid <- grid_regular(
-  mtry(range = c(2, 10)), 
-  min_n(range = c(5, 15)), 
+  mtry(range = c(2, 15)), 
+  min_n(range = c(5, 20)), 
   levels = 5
 )
 
