@@ -19,6 +19,7 @@ tuned_model <- control_stack_resamples()
 folds <- vfold_cv(train, v = 5, repeats = 1)
 
 my_recipe <- recipe(Cover_Type~., data=train) %>%
+  step_impute_median(contains("Soil_Type")) %>%
   step_rm(Id) %>%
   step_zv(all_predictors()) %>%
   step_normalize(all_numeric_predictors())
@@ -37,7 +38,8 @@ rf_model <- fit_resamples(rf_wf,
                           control = tuned_model)
 
 
-nn_recipe <- recipe(Cover_Type~., data = rawdata) %>%
+nn_recipe <- recipe(Cover_Type~., data = train) %>%
+  step_impute_median(contains("Soil_Type")) %>%
   step_rm(Id) %>%
   step_zv(all_predictors()) %>%
   step_range(all_numeric_predictors(), min=0, max=1)
@@ -56,7 +58,8 @@ nn_model <- fit_resamples(nn_wf,
                           metrics = metric_set(roc_auc),
                           control = tuned_model)
 
-boost_recipe <- recipe(Cover_Type~., data=rawdata) %>%
+boost_recipe <- recipe(Cover_Type~., data=train) %>%
+  step_impute_median(contains("Soil_Type")) %>%
   step_zv(all_predictors()) %>%
   step_normalize(all_numeric_predictors())
 
@@ -84,26 +87,15 @@ stack_mod <- my_stack %>%
   fit_members()
 
 stack_preds <- stack_mod %>%
-  predict(new_data = test_input, type = "class")
+  predict(new_data = test, type = "class")
 
 format_and_write <- function(predictions, file){
   final_preds <- predictions %>%
     mutate(Cover_Type = .pred_class) %>%
-    mutate(Id = test_input$Id) %>%
+    mutate(Id = test$Id) %>%
     dplyr::select(Id, Cover_Type)
   
   vroom_write(final_preds,file,delim = ",")
 }
 
 format_and_write(stack_preds, "stack_preds.csv")
-
-
-
-
-
-
-
-
-
-
-
